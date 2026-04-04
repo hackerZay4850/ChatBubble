@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<meta charset='utf-8'>
+<title>ESP32 Chatroom</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#1a1a2e;height:100vh;display:flex;align-items:center;justify-content:center}
+#setup{background:#16213e;border-radius:16px;padding:32px;width:90%;max-width:360px;display:flex;flex-direction:column;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,0.4)}
+#setup h2{color:white;text-align:center;font-size:1.4em}
+#setup p{color:#aaa;text-align:center;font-size:0.9em}
+#setup input{padding:12px;border:none;border-radius:10px;background:#0f3460;color:white;font-size:1em;outline:none}
+#setup input::placeholder{color:#888}
+.colors{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.color-btn{width:32px;height:32px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:transform 0.2s}
+.color-btn.selected{border-color:white;transform:scale(1.2)}
+#setup button{padding:12px;background:linear-gradient(135deg,#e94560,#0f3460);color:white;border:none;border-radius:10px;font-size:1em;cursor:pointer;font-weight:600}
+#setup button:hover{opacity:0.9}
+#app{display:none;flex-direction:column;height:100vh;width:100%;max-width:600px;margin:auto;padding:16px;gap:10px}
+#topbar{display:flex;align-items:center;justify-content:space-between}
+#topbar h2{color:white;font-size:1.1em}
+#userinfo{display:flex;align-items:center;gap:8px}
+#userdot{width:14px;height:14px;border-radius:50%}
+#username-display{color:#aaa;font-size:0.9em}
+#chat{flex:1;overflow-y:auto;background:#16213e;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:6px}
+#chat::-webkit-scrollbar{width:4px}
+#chat::-webkit-scrollbar-thumb{background:#0f3460;border-radius:4px}
+.msg{padding:8px 12px;border-radius:12px;max-width:75%;word-wrap:break-word;font-size:0.95em;line-height:1.4}
+.msg .sender{font-size:0.75em;font-weight:600;margin-bottom:2px;opacity:0.8}
+.msg .text{color:white}
+.mine{align-self:flex-end}
+.other{align-self:flex-start}
+.esp{align-self:flex-start;background:#1a3a5c!important}
+.esp .sender{color:#64b5f6}
+.row{display:flex;gap:8px}
+#msg{flex:1;padding:12px;border:none;border-radius:12px;background:#16213e;color:white;font-size:1em;outline:none}
+#msg::placeholder{color:#555}
+#msg:focus{background:#1a2a4a}
+#send-btn{padding:12px 18px;border:none;border-radius:12px;color:white;font-size:1em;cursor:pointer;font-weight:600;transition:opacity 0.2s}
+#send-btn:hover{opacity:0.85}
+#status{color:#555;font-size:0.75em;text-align:center}
+</style>
+</head>
+<body>
+
+<div id='setup'>
+  <h2>ESP32 Chatroom</h2>
+  <p>Choose your name and colour to join</p>
+  <input id='name-input' placeholder='Your name...' maxlength='20'/>
+  <div class='colors'>
+    <div class='color-btn selected' style='background:#e94560' data-color='#e94560'></div>
+    <div class='color-btn' style='background:#00b4d8' data-color='#00b4d8'></div>
+    <div class='color-btn' style='background:#06d6a0' data-color='#06d6a0'></div>
+    <div class='color-btn' style='background:#ffd166' data-color='#ffd166'></div>
+    <div class='color-btn' style='background:#c77dff' data-color='#c77dff'></div>
+    <div class='color-btn' style='background:#ff9a3c' data-color='#ff9a3c'></div>
+    <div class='color-btn' style='background:#f72585' data-color='#f72585'></div>
+    <div class='color-btn' style='background:#4cc9f0' data-color='#4cc9f0'></div>
+  </div>
+  <button onclick='joinChat()'>Join Chat</button>
+</div>
+
+<div id='app'>
+  <div id='topbar'>
+    <h2>ESP32 Chatroom</h2>
+    <div id='userinfo'>
+      <div id='userdot'></div>
+      <span id='username-display'></span>
+    </div>
+  </div>
+  <div id='chat'></div>
+  <div id='status'>connecting...</div>
+  <div class='row'>
+    <input id='msg' placeholder='Type a message...'/>
+    <button id='send-btn' onclick='s()'>Send</button>
+  </div>
+</div>
+
+<script>
+var myName = '';
+var myColor = '#e94560';
+
+document.querySelectorAll('.color-btn').forEach(function(btn){
+  btn.onclick = function(){
+    document.querySelectorAll('.color-btn').forEach(function(b){ b.classList.remove('selected'); });
+    btn.classList.add('selected');
+    myColor = btn.getAttribute('data-color');
+  };
+});
+
+function joinChat(){
+  var name = document.getElementById('name-input').value.trim();
+  if(!name){ alert('Please enter a name!'); return; }
+  myName = name;
+  localStorage.setItem('chatName', name);
+  localStorage.setItem('chatColor', myColor);
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('username-display').textContent = myName;
+  document.getElementById('userdot').style.background = myColor;
+  document.getElementById('send-btn').style.background = myColor;
+  u();
+}
+
+window.onload = function(){
+  var saved = localStorage.getItem('chatName');
+  var savedColor = localStorage.getItem('chatColor');
+  if(saved){
+    document.getElementById('name-input').value = saved;
+  }
+  if(savedColor){
+    myColor = savedColor;
+    document.querySelectorAll('.color-btn').forEach(function(b){
+      b.classList.remove('selected');
+      if(b.getAttribute('data-color') === savedColor) b.classList.add('selected');
+    });
+  }
+};
+
+function u(){
+  fetch('/messages').then(function(r){ return r.json(); }).then(function(data){
+    var c = document.getElementById('chat');
+    var atBottom = c.scrollHeight - c.scrollTop <= c.clientHeight + 10;
+    c.innerHTML = '';
+    data.forEach(function(m){
+      var div = document.createElement('div');
+      var isMe = m.sender === myName;
+      var isEsp = m.sender === 'ESP32';
+      div.className = 'msg ' + (isEsp ? 'esp' : (isMe ? 'mine' : 'other'));
+      div.style.background = isEsp ? '' : m.color;
+      div.innerHTML = '<div class="sender">' + m.sender + '</div><div class="text">' + m.text + '</div>';
+      c.appendChild(div);
+    });
+    if(atBottom) c.scrollTop = c.scrollHeight;
+    document.getElementById('status').textContent = 'connected';
+  }).catch(function(){
+    document.getElementById('status').textContent = 'reconnecting...';
+  });
+}
+
+function s(){
+  var input = document.getElementById('msg');
+  var m = input.value.trim();
+  if(!m) return;
+  input.value = '';
+  fetch('/send?msg=' + encodeURIComponent(m) + '&sender=' + encodeURIComponent(myName) + '&color=' + encodeURIComponent(myColor))
+    .then(function(){ u(); }).catch(function(){});
+}
+
+document.getElementById('msg').onkeypress = function(e){ if(e.key==='Enter') s(); };
+setInterval(u, 3000);
+</script>
+</body>
+</html>
