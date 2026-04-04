@@ -106,15 +106,22 @@ function joinChat(){
 window.onload = function(){
   var saved = localStorage.getItem('chatName');
   var savedColor = localStorage.getItem('chatColor');
-  if(saved){
-    document.getElementById('name-input').value = saved;
-  }
   if(savedColor){
     myColor = savedColor;
     document.querySelectorAll('.color-btn').forEach(function(b){
       b.classList.remove('selected');
       if(b.getAttribute('data-color') === savedColor) b.classList.add('selected');
     });
+  }
+  if(saved){
+    document.getElementById('name-input').value = saved;
+    myName = saved;
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('username-display').textContent = myName;
+    document.getElementById('userdot').style.background = myColor;
+    document.getElementById('send-btn').style.background = myColor;
+    u();
   }
 };
 
