@@ -136,6 +136,7 @@ function u(){
       var isEsp = m.sender === 'ESP32';
       div.className = 'msg ' + (isEsp ? 'esp' : (isMe ? 'mine' : 'other'));
       div.style.background = isEsp ? '' : m.color;
+      div.style.color = isLight(m.color) ? '#1a1a2e' : 'white';
       div.innerHTML = '<div class="sender">' + m.sender + '</div><div class="text">' + m.text + '</div>';
       c.appendChild(div);
     });
