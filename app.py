@@ -145,6 +145,12 @@ def icon192():
 def icon512():
     return open("icon-512.png", "rb").read(), 200, {"Content-Type": "image/png"}
 
+bubble_pending = {}
+
+@app.route("/bubble-status")
+def bubble_status():
+    return jsonify({"pending": len(bubble_pending) > 0})
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
