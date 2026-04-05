@@ -14,6 +14,21 @@ DB_URL = "https://esp32-chat-a33d7-default-rtdb.europe-west1.firebasedatabase.ap
 online_users = {}
 typing_users = {}
 
+def get_ai_reply(messages_history):
+    try:
+        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+        history = "\n".join([m["sender"] + ": " + m["text"] for m in messages_history[-10:]])
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=200,
+            system="You are Bubble, a friendly AI in a chatroom. Keep replies short and conversational. You were summoned with @Bubble.",
+            messages=[{"role": "user", "content": history}]
+        )
+        return response.content[0].text
+    except:
+        return "Sorry, I'm having trouble thinking right now!"
+
+
 def load_messages():
     try:
         r = req.get(DB_URL + "/messages.json")
@@ -115,6 +130,14 @@ def icon192():
 @app.route("/icon-512.png")
 def icon512():
     return open("icon-512.png", "rb").read(), 200, {"Content-Type": "image/png"}
+
+if "@Bubble" in msg or "@bubble" in msg:
+    history = load_messages()
+    reply = get_ai_reply(history)
+    from datetime import datetime
+    now = datetime.utcnow().strftime("%H:%M")
+    save_message({"sender": "Bubble", "text": reply, "color": "#c77dff", "time": now})
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
