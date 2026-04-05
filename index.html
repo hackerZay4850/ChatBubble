@@ -11,6 +11,12 @@
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js');}</script>
 <title>ChatBubble</title>
 <style>
+.bubble-typing{align-self:flex-start;background:#c77dff;padding:8px 16px;border-radius:12px;display:flex;gap:6px;align-items:center}
+.bubble-typing span{width:8px;height:8px;border-radius:50%;background:white;animation:bounce 1s infinite}
+.bubble-typing span:nth-child(2){animation-delay:0.2s}
+.bubble-typing span:nth-child(3){animation-delay:0.4s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
+
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',sans-serif;background:#1a1a2e;height:100vh;display:flex;align-items:center;justify-content:center}
 #setup{background:#16213e;border-radius:16px;padding:32px;width:90%;max-width:360px;display:flex;flex-direction:column;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,0.4)}
