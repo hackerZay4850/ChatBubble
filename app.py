@@ -61,9 +61,6 @@ def send():
 def get_messages():
     return jsonify(load_messages())
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
 @app.route("/manifest.json")
 def manifest():
     return open("manifest.json").read(), 200, {"Content-Type": "application/json"}
@@ -80,3 +77,6 @@ def icon192():
 def icon512():
     return open("icon-512.png", "rb").read(), 200, {"Content-Type": "image/png"}
 
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
