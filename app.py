@@ -62,16 +62,23 @@ def get_now():
 
 def get_ai_reply(messages_history):
     try:
-        client = Mistral(api_key=os.environ.get("MISTRAL_API_KEY"))
         history = "\n".join([m["sender"] + ": " + m["text"] for m in messages_history[-10:]])
-        response = client.chat.complete(
-            model="mistral-small-latest",
-            messages=[
-                {"role": "system", "content": "You are Bubble, a friendly and witty AI in a chatroom. Keep replies short and conversational. You were summoned with @Bubble."},
-                {"role": "user", "content": history}
-            ]
+        response = req.post(
+            "https://api.mistral.ai/v1/chat/completions",
+            headers={
+                "Authorization": "Bearer " + os.environ.get("MISTRAL_API_KEY", ""),
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "mistral-small-latest",
+                "messages": [
+                    {"role": "system", "content": "You are Bubble, a friendly and witty AI in a chatroom. Keep replies short and conversational. You were summoned with @Bubble."},
+                    {"role": "user", "content": history}
+                ],
+                "max_tokens": 200
+            }
         )
-        return response.choices[0].message.content
+        return response.json()["choices"][0]["message"]["content"]
     except Exception as e:
         print("AI error:", e)
         return "Sorry, I'm having trouble thinking right now!"
