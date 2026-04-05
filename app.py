@@ -1,8 +1,47 @@
 from flask import Flask, request, jsonify
 import os
+import requests as req
+import json
 
 app = Flask(__name__)
-messages = []
+
+DB_URL = "https://esp32-chat-a33d7-default-rtdb.europe-west1.firebasedatabase.app"
+
+def load_messages():
+    try:
+        r = req.get(DB_URL + "/messages.json")
+        data = r.json()
+        if not data:
+            return []
+        if isinstance(data, list):
+            return [m for m in data if m is not None]
+        if isinstance(data, dict):
+            return [data[k] for k in sorted(data.keys())]
+    except:
+        return []
+    return []
+
+def save_message(msg):
+    try:
+        req.post(DB_URL + "/messages.json", json=msg)
+    except:
+        pass
+
+def trim_messages():
+    try:
+        r = req.get(DB_URL + "/messages.json")
+        data = r.json()
+        if not data:
+            return
+        if isinstance(data, list):
+            keys = [i for i, m in enumerate(data) if m is not None]
+        else:
+            keys = sorted(data.keys())
+        if len(keys) > 50:
+            for k in keys[:-50]:
+                req.delete(DB_URL + "/messages/" + str(k) + ".json")
+    except:
+        pass
 
 @app.route("/")
 def index():
@@ -14,14 +53,13 @@ def send():
     sender = request.args.get("sender", "User")
     color = request.args.get("color", "#00b4d8")
     if msg:
-        messages.append({"sender": sender, "text": msg, "color": color})
-        if len(messages) > 50:
-            messages.pop(0)
+        save_message({"sender": sender, "text": msg, "color": color})
+        trim_messages()
     return "OK"
 
 @app.route("/messages")
 def get_messages():
-    return jsonify(messages)
+    return jsonify(load_messages())
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
