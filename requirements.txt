@@ -1,4 +1,4 @@
 flask
 gunicorn
 requests
-mistralai
+mistralai>=1.0.0
