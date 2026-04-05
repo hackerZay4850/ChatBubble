@@ -2,8 +2,8 @@ from flask import Flask, request, jsonify
 import os
 import requests as req
 import time
-import anthropic
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+from mistralai import Mistral
 
 app = Flask(__name__)
 
@@ -57,17 +57,21 @@ def clean_online():
         if now - typing_users[u] > 5:
             del typing_users[u]
 
+def get_now():
+    return (datetime.now(timezone.utc) + timedelta(hours=1)).strftime("%H:%M")
+
 def get_ai_reply(messages_history):
     try:
-        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+        client = Mistral(api_key=os.environ.get("MISTRAL_API_KEY"))
         history = "\n".join([m["sender"] + ": " + m["text"] for m in messages_history[-10:]])
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=200,
-            system="You are Bubble, a friendly and witty AI in a chatroom. Keep replies short and conversational. You were summoned with @Bubble.",
-            messages=[{"role": "user", "content": history}]
+        response = client.chat.complete(
+            model="mistral-small-latest",
+            messages=[
+                {"role": "system", "content": "You are Bubble, a friendly and witty AI in a chatroom. Keep replies short and conversational. You were summoned with @Bubble."},
+                {"role": "user", "content": history}
+            ]
         )
-        return response.content[0].text
+        return response.choices[0].message.content
     except Exception as e:
         print("AI error:", e)
         return "Sorry, I'm having trouble thinking right now!"
@@ -84,14 +88,12 @@ def send():
     if sender in typing_users:
         del typing_users[sender]
     if msg:
-        now = datetime.utcnow().strftime("%H:%M")
-        save_message({"sender": sender, "text": msg, "color": color, "time": now})
+        save_message({"sender": sender, "text": msg, "color": color, "time": get_now()})
         trim_messages()
         if "@Bubble" in msg or "@bubble" in msg:
             history = load_messages()
             reply = get_ai_reply(history)
-            now = datetime.utcnow().strftime("%H:%M")
-            save_message({"sender": "Bubble", "text": reply, "color": "#c77dff", "time": now})
+            save_message({"sender": "Bubble", "text": reply, "color": "#c77dff", "time": get_now()})
     return "OK"
 
 @app.route("/ping")
