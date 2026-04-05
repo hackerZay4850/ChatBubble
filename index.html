@@ -8,12 +8,7 @@
 <meta name='apple-mobile-web-app-capable' content='yes'>
 <meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>
 <meta name='apple-mobile-web-app-title' content='ChatBubble'>
-<script>
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/sw.js');
-}
-</script>
-
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js');}</script>
 <title>ChatBubble</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -28,29 +23,34 @@ body{font-family:'Segoe UI',sans-serif;background:#1a1a2e;height:100vh;display:f
 .color-btn.selected{border-color:white;transform:scale(1.2)}
 #setup button{padding:12px;background:linear-gradient(135deg,#e94560,#0f3460);color:white;border:none;border-radius:10px;font-size:1em;cursor:pointer;font-weight:600}
 #setup button:hover{opacity:0.9}
-#app{display:none;flex-direction:column;height:100vh;width:100%;max-width:600px;margin:auto;padding:16px;gap:10px}
+#app{display:none;flex-direction:column;height:100vh;width:100%;max-width:600px;margin:auto;padding:16px;gap:8px}
 #topbar{display:flex;align-items:center;justify-content:space-between}
 #topbar h2{color:white;font-size:1.1em}
 #userinfo{display:flex;align-items:center;gap:8px}
 #userdot{width:14px;height:14px;border-radius:50%}
 #username-display{color:#aaa;font-size:0.9em}
+#online-bar{display:flex;gap:6px;flex-wrap:wrap;min-height:20px}
+.online-pill{display:flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:0.72em;color:white;background:#0f3460}
+.online-dot{width:6px;height:6px;border-radius:50%;background:#06d6a0}
 #chat{flex:1;overflow-y:auto;background:#16213e;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:6px}
 #chat::-webkit-scrollbar{width:4px}
 #chat::-webkit-scrollbar-thumb{background:#0f3460;border-radius:4px}
 .msg{padding:8px 12px;border-radius:12px;max-width:75%;word-wrap:break-word;font-size:0.95em;line-height:1.4}
 .msg .sender{font-size:0.75em;font-weight:600;margin-bottom:2px;opacity:0.8}
 .msg .text{color:inherit}
+.msg .timestamp{font-size:0.68em;opacity:0.4;margin-top:2px}
 .mine{align-self:flex-end}
 .other{align-self:flex-start}
 .esp{align-self:flex-start;background:#1a3a5c!important}
 .esp .sender{color:#64b5f6}
+#typing{color:#aaa;font-size:0.78em;min-height:18px;padding:0 4px;font-style:italic}
 .row{display:flex;gap:8px}
 #msg{flex:1;padding:12px;border:none;border-radius:12px;background:#16213e;color:white;font-size:1em;outline:none}
 #msg::placeholder{color:#555}
 #msg:focus{background:#1a2a4a}
 #send-btn{padding:12px 18px;border:none;border-radius:12px;color:white;font-size:1em;cursor:pointer;font-weight:600;transition:opacity 0.2s}
 #send-btn:hover{opacity:0.85}
-#status{color:#555;font-size:0.75em;text-align:center}
+#status{color:#555;font-size:0.72em;text-align:center}
 </style>
 </head>
 <body>
@@ -80,7 +80,9 @@ body{font-family:'Segoe UI',sans-serif;background:#1a1a2e;height:100vh;display:f
       <span id='username-display'></span>
     </div>
   </div>
+  <div id='online-bar'></div>
   <div id='chat'></div>
+  <div id='typing'></div>
   <div id='status'>connecting...</div>
   <div class='row'>
     <input id='msg' placeholder='Type a message...'/>
@@ -91,6 +93,8 @@ body{font-family:'Segoe UI',sans-serif;background:#1a1a2e;height:100vh;display:f
 <script>
 var myName = '';
 var myColor = '#e94560';
+var lastCount = 0;
+var typingTimeout = null;
 
 function isLight(hex){
   if(!hex) return false;
@@ -119,7 +123,7 @@ function joinChat(){
   document.getElementById('username-display').textContent = myName;
   document.getElementById('userdot').style.background = myColor;
   document.getElementById('send-btn').style.background = myColor;
-  u();
+  startPolling();
 }
 
 window.onload = function(){
@@ -133,16 +137,23 @@ window.onload = function(){
     });
   }
   if(saved){
-    document.getElementById('name-input').value = saved;
     myName = saved;
+    document.getElementById('name-input').value = saved;
     document.getElementById('setup').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     document.getElementById('username-display').textContent = myName;
     document.getElementById('userdot').style.background = myColor;
     document.getElementById('send-btn').style.background = myColor;
-    u();
+    startPolling();
   }
 };
+
+function startPolling(){
+  u();
+  ping();
+  setInterval(u, 2000);
+  setInterval(ping, 5000);
+}
 
 function u(){
   fetch('/messages').then(function(r){ return r.json(); }).then(function(data){
@@ -156,15 +167,54 @@ function u(){
       div.className = 'msg ' + (isEsp ? 'esp' : (isMe ? 'mine' : 'other'));
       div.style.background = isEsp ? '' : m.color;
       div.style.color = isLight(m.color) ? '#1a1a2e' : 'white';
-      div.innerHTML = '<div class="sender">' + m.sender + '</div><div class="text">' + m.text + '</div>';
+      var time = m.time ? m.time : '';
+      div.innerHTML = '<div class="sender">' + m.sender + '</div><div class="text">' + m.text + '</div><div class="timestamp">' + time + '</div>';
       c.appendChild(div);
     });
     if(atBottom) c.scrollTop = c.scrollHeight;
     document.getElementById('status').textContent = 'connected';
+    if(data.length > lastCount && lastCount !== 0){
+      var latest = data[data.length - 1];
+      if(latest.sender !== myName){
+        playBeep();
+        if(navigator.vibrate) navigator.vibrate(200);
+      }
+    }
+    lastCount = data.length;
   }).catch(function(){
     document.getElementById('status').textContent = 'reconnecting...';
   });
 }
+
+function ping(){
+  fetch('/ping?sender=' + encodeURIComponent(myName))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var bar = document.getElementById('online-bar');
+      bar.innerHTML = '';
+      data.online.forEach(function(name){
+        var pill = document.createElement('div');
+        pill.className = 'online-pill';
+        pill.innerHTML = '<div class="online-dot"></div>' + name;
+        bar.appendChild(pill);
+      });
+      var others = data.typing.filter(function(n){ return n !== myName; });
+      var t = document.getElementById('typing');
+      if(others.length > 0){
+        t.textContent = others.join(', ') + (others.length === 1 ? ' is' : ' are') + ' typing...';
+      } else {
+        t.textContent = '';
+      }
+    }).catch(function(){});
+}
+
+function onTyping(){
+  if(typingTimeout) clearTimeout(typingTimeout);
+  fetch('/typing?sender=' + encodeURIComponent(myName)).catch(function(){});
+  typingTimeout = setTimeout(function(){ typingTimeout = null; }, 4000);
+}
+
+document.getElementById('msg').oninput = function(){ onTyping(); };
 
 function s(){
   var input = document.getElementById('msg');
@@ -175,8 +225,20 @@ function s(){
     .then(function(){ u(); }).catch(function(){});
 }
 
+function playBeep(){
+  try{
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var o = ctx.createOscillator();
+    var g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.3, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.3);
+  }catch(e){}
+}
+
 document.getElementById('msg').onkeypress = function(e){ if(e.key==='Enter') s(); };
-setInterval(u, 3000);
 </script>
 </body>
 </html>
