@@ -64,3 +64,19 @@ def get_messages():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
+@app.route("/manifest.json")
+def manifest():
+    return open("manifest.json").read(), 200, {"Content-Type": "application/json"}
+
+@app.route("/sw.js")
+def sw():
+    return open("sw.js").read(), 200, {"Content-Type": "application/javascript"}
+
+@app.route("/icon-192.png")
+def icon192():
+    return open("icon-192.png", "rb").read(), 200, {"Content-Type": "image/png"}
+
+@app.route("/icon-512.png")
+def icon512():
+    return open("icon-512.png", "rb").read(), 200, {"Content-Type": "image/png"}
+
