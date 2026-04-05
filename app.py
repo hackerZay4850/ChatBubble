@@ -14,19 +14,6 @@ DB_URL = "https://esp32-chat-a33d7-default-rtdb.europe-west1.firebasedatabase.ap
 online_users = {}
 typing_users = {}
 
-def get_ai_reply(messages_history):
-    try:
-        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-        history = "\n".join([m["sender"] + ": " + m["text"] for m in messages_history[-10:]])
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=200,
-            system="You are Bubble, a friendly AI in a chatroom. Keep replies short and conversational. You were summoned with @Bubble.",
-            messages=[{"role": "user", "content": history}]
-        )
-        return response.content[0].text
-    except:
-        return "Sorry, I'm having trouble thinking right now!"
 
 
 def load_messages():
@@ -73,6 +60,21 @@ def clean_online():
     for u in list(typing_users.keys()):
         if now - typing_users[u] > 5:
             del typing_users[u]
+
+def get_ai_reply(messages_history):
+    try:
+        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+        history = "\n".join([m["sender"] + ": " + m["text"] for m in messages_history[-10:]])
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=200,
+            system="You are Bubble, a friendly AI in a chatroom. Keep replies short and conversational. You were summoned with @Bubble.",
+            messages=[{"role": "user", "content": history}]
+        )
+        return response.content[0].text
+    except:
+        return "Sorry, I'm having trouble thinking right now!"
+
 
 @app.route("/")
 def index():
