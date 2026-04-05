@@ -1,12 +1,1 @@
-# Updated app.py
-
-# Other existing content of app.py...
-
-@app.route('/send')
-
-
-def send():
-    # Logic for send function
-    pass
-
-# Ensure all other function decorators also followed by newlines
+from flask import Flask, request, jsonify\nimport firebase_admin\nfrom firebase_admin import credentials, firestore\n\n# Initialize Flask app\napp = Flask(__name__)\n\n# Firebase initialization\ncred = credentials.Certificate('path/to/serviceAccountKey.json')\nfirebase_admin.initialize_app(cred)\ndb = firestore.client()\n\n# Define AI Functions\n# (Define your AI functions here)\n\n# Define routes\n@app.route('/')\ndef home():\n    return "Welcome to the ChatBubble Flask App!"\n\n@app.route('/send', methods=['POST'])\ndef send():\n    data = request.json\n    # Include Bubble AI mention detection\n    if '@Bubble' in data['message']: \n        # Handle AI interaction\n        pass\n    # Logic for sending message\n    return jsonify({'status': 'Message sent'})\n\n@app.route('/ping')\ndef ping():\n    return jsonify({'status': 'pong'})\n\n@app.route('/typing')\ndef typing():\n    return jsonify({'status': 'typing...'})\n\n@app.route('/messages')\ndef messages():\n    # Logic to retrieve messages\n    return jsonify({'messages': []})\n\n@app.route('/manifest.json')\ndef manifest():\n    # Logic to serve manifest.json file\n    return jsonify({})\n\n@app.route('/sw.js')\ndef sw():\n    # Logic to serve service worker script\n    return jsonify({})\n\n@app.route('/icon-192.png')\ndef icon_192():\n    # Logic to serve icon-192.png\n    return jsonify({})\n\n@app.route('/icon-512.png')\ndef icon_512():\n    # Logic to serve icon-512.png\n    return jsonify({})\n\nif __name__ == '__main__':\n    app.run(debug=True)
