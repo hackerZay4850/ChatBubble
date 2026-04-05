@@ -75,8 +75,11 @@ def get_ai_reply(messages_history):
                     {"role": "user", "content": history}
                 ],
                 "max_tokens": 200
-            }
+            },
+            timeout=10
         )
+        print("Mistral status:", response.status_code)
+        print("Mistral response:", response.text[:200])
         return response.json()["choices"][0]["message"]["content"]
     except Exception as e:
         print("AI error:", e)
