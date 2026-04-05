@@ -227,9 +227,38 @@ function s(){
   var m = input.value.trim();
   if(!m) return;
   input.value = '';
+  var hasBubble = m.toLowerCase().includes('@bubble');
   fetch('/send?msg=' + encodeURIComponent(m) + '&sender=' + encodeURIComponent(myName) + '&color=' + encodeURIComponent(myColor))
-    .then(function(){ u(); }).catch(function(){});
+    .then(function(){
+      u();
+      if(hasBubble){
+        var c = document.getElementById('chat');
+        var indicator = document.createElement('div');
+        indicator.className = 'bubble-typing';
+        indicator.id = 'bubble-indicator';
+        indicator.innerHTML = '<span></span><span></span><span></span>';
+        c.appendChild(indicator);
+        c.scrollTop = c.scrollHeight;
+        var check = setInterval(function(){
+          fetch('/messages').then(function(r){ return r.json(); }).then(function(data){
+            var last = data[data.length - 1];
+            if(last && last.sender === 'Bubble'){
+              clearInterval(check);
+              var ind = document.getElementById('bubble-indicator');
+              if(ind) ind.remove();
+              u();
+            }
+          });
+        }, 1500);
+        setTimeout(function(){
+          clearInterval(check);
+          var ind = document.getElementById('bubble-indicator');
+          if(ind) ind.remove();
+        }, 35000);
+      }
+    }).catch(function(){});
 }
+
 
 function playBeep(){
   try{
