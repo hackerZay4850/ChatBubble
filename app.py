@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 import os
 import requests as req
-import json
 import time
 import anthropic
 from datetime import datetime
@@ -17,17 +16,15 @@ typing_users = {}
 
 # Constants
 MESSAGE_LIMIT = 50
-ONLINE_TIMEOUT = 15  # seconds
-TYPING_TIMEOUT = 5   # seconds
+ONLINE_TIMEOUT = 15
+TYPING_TIMEOUT = 5
 AI_MESSAGE_HISTORY = 10
 
-# ==================== Database Functions ====================
 
 def load_messages():
     """Load all messages from Firebase."""
     try:
         response = req.get(DB_URL + "/messages.json", timeout=5)
-        response.raise_for_status()
         data = response.json()
         
         if not data:
@@ -39,6 +36,7 @@ def load_messages():
     except Exception as e:
         print(f"Error loading messages: {e}")
         return []
+
 
 def save_message(msg):
     """Save a message to Firebase."""
@@ -52,7 +50,6 @@ def trim_messages():
     """Keep only the last MESSAGE_LIMIT messages."""
     try:
         response = req.get(DB_URL + "/messages.json", timeout=5)
-        response.raise_for_status()
         data = response.json()
         
         if not data:
@@ -69,30 +66,25 @@ def trim_messages():
     except Exception as e:
         print(f"Error trimming messages: {e}")
 
-# ==================== User Activity Functions ====================
 
 def clean_online():
     """Remove inactive users from online/typing lists."""
     now = time.time()
     
-    # Clean online users
     for user in list(online_users.keys()):
         if now - online_users[user] > ONLINE_TIMEOUT:
             del online_users[user]
     
-    # Clean typing users
     for user in list(typing_users.keys()):
         if now - typing_users[user] > TYPING_TIMEOUT:
             del typing_users[user]
 
-# ==================== AI Functions ====================
 
 def get_ai_reply(messages_history):
     """Get a reply from Claude AI using message history."""
     try:
         client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
         
-        # Format the last N messages as conversation history
         history = "\n".join([
             f"{m['sender']}: {m['text']}" 
             for m in messages_history[-AI_MESSAGE_HISTORY:]
@@ -110,7 +102,6 @@ def get_ai_reply(messages_history):
         print(f"Error getting AI reply: {e}")
         return "Sorry, I'm having trouble thinking right now!"
 
-# ==================== Flask Routes ====================
 
 @app.route("/")
 def index():
@@ -120,26 +111,24 @@ def index():
     except FileNotFoundError:
         return "Error: index.html not found", 404
 
-@app.route("/send", methods=["GET", "POST"])
-def send():
+
+@app.route("/send", methods=["GET", "POST"])def send():
     """Handle incoming messages."""
     msg = request.args.get("msg") or request.form.get("msg")
     sender = request.args.get("sender", "User")
     color = request.args.get("color", "#00b4d8")
     
-    # Remove sender from typing list
     if sender in typing_users:
         del typing_users[sender]
     
     if msg:
         now = datetime.utcnow().strftime("%H:%M")
         
-        # Save the user's message
         save_message({
             "sender": sender,
             "text": msg,
             "color": color,
-            "time": now,
+            "time": now
         })
         
         # Check if @Bubble was mentioned
@@ -147,17 +136,17 @@ def send():
             history = load_messages()
             reply = get_ai_reply(history)
             
-            # Save AI reply
             save_message({
                 "sender": "Bubble",
                 "text": reply,
                 "color": "#c77dff",
-                "time": datetime.utcnow().strftime("%H:%M"),
+                "time": datetime.utcnow().strftime("%H:%M")
             })
         
         trim_messages()
     
     return "OK"
+
 
 @app.route("/ping")
 def ping():
@@ -171,8 +160,9 @@ def ping():
     
     return jsonify({
         "online": list(online_users.keys()),
-        "typing": list(typing_users.keys()),
+        "typing": list(typing_users.keys())
     })
+
 
 @app.route("/typing")
 def typing():
@@ -187,10 +177,12 @@ def typing():
     
     return "OK"
 
+
 @app.route("/messages")
 def get_messages():
     """Get all messages."""
     return jsonify(load_messages())
+
 
 @app.route("/manifest.json")
 def manifest():
@@ -200,6 +192,7 @@ def manifest():
     except FileNotFoundError:
         return "Error: manifest.json not found", 404
 
+
 @app.route("/sw.js")
 def sw():
     """Serve service worker."""
@@ -207,6 +200,7 @@ def sw():
         return open("sw.js").read(), 200, {"Content-Type": "application/javascript"}
     except FileNotFoundError:
         return "Error: sw.js not found", 404
+
 
 @app.route("/icon-192.png")
 def icon192():
@@ -216,6 +210,7 @@ def icon192():
     except FileNotFoundError:
         return "Error: icon-192.png not found", 404
 
+
 @app.route("/icon-512.png")
 def icon512():
     """Serve 512px icon."""
@@ -224,7 +219,6 @@ def icon512():
     except FileNotFoundError:
         return "Error: icon-512.png not found", 404
 
-# ==================== Main ====================
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
