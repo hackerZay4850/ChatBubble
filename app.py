@@ -2,10 +2,15 @@ from flask import Flask, request, jsonify
 import os
 import requests as req
 import json
+import time
+from datetime import datetime
 
 app = Flask(__name__)
 
 DB_URL = "https://esp32-chat-a33d7-default-rtdb.europe-west1.firebasedatabase.app"
+
+online_users = {}
+typing_users = {}
 
 def load_messages():
     try:
@@ -43,6 +48,15 @@ def trim_messages():
     except:
         pass
 
+def clean_online():
+    now = time.time()
+    for u in list(online_users.keys()):
+        if now - online_users[u] > 15:
+            del online_users[u]
+    for u in list(typing_users.keys()):
+        if now - typing_users[u] > 5:
+            del typing_users[u]
+
 @app.route("/")
 def index():
     return open("index.html").read()
@@ -52,9 +66,32 @@ def send():
     msg = request.args.get("msg") or request.form.get("msg")
     sender = request.args.get("sender", "User")
     color = request.args.get("color", "#00b4d8")
+    if sender in typing_users:
+        del typing_users[sender]
     if msg:
-        save_message({"sender": sender, "text": msg, "color": color})
+        now = datetime.utcnow().strftime("%H:%M")
+        save_message({"sender": sender, "text": msg, "color": color, "time": now})
         trim_messages()
+    return "OK"
+
+@app.route("/ping")
+def ping():
+    sender = request.args.get("sender", "")
+    if sender:
+        online_users[sender] = time.time()
+    clean_online()
+    return jsonify({
+        "online": list(online_users.keys()),
+        "typing": list(typing_users.keys())
+    })
+
+@app.route("/typing")
+def typing():
+    sender = request.args.get("sender", "")
+    if sender:
+        typing_users[sender] = time.time()
+        online_users[sender] = time.time()
+    clean_online()
     return "OK"
 
 @app.route("/messages")
