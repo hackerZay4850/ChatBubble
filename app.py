@@ -3,7 +3,6 @@ import os
 import requests as req
 import time
 from datetime import datetime, timezone, timedelta
-from mistralai import Mistral
 
 app = Flask(__name__)
 
