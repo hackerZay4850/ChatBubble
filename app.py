@@ -76,7 +76,7 @@ def get_ai_reply(messages_history):
                 ],
                 "max_tokens": 200
             },
-            timeout=10
+            timeout=30
         )
         print("Mistral status:", response.status_code)
         print("Mistral response:", response.text[:200])
